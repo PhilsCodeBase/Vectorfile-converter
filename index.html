@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linienwerk — Bild zu Vektorpfad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0c0f14;
+    --panel: #12161d;
+    --panel-2: #171c25;
+    --line: #232a36;
+    --text: #e7eaf1;
+    --muted: #8791a3;
+    --mint: #6ee7b7;
+    --mint-dim: #3fae86;
+    --amber: #ff8a3d;
+    --radius: 3px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 34px 34px;
+    background-position: -1px -1px;
+  }
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 26px 0 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 40px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:28px; height:28px; border:1.5px solid var(--mint);
+    position:relative; flex-shrink:0;
+  }
+  .brand-mark::after{
+    content:''; position:absolute; inset:6px;
+    border:1.5px solid var(--mint); opacity:.5;
+  }
+  .brand-name{
+    font-family:'Space Grotesk'; font-weight:600; font-size:18px; letter-spacing:.01em;
+  }
+  .brand-tag{
+    font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); letter-spacing:.04em;
+    border-left:1px solid var(--line); padding-left:14px; margin-left:4px;
+  }
+  nav a{ color:var(--muted); text-decoration:none; font-size:13px; font-family:'JetBrains Mono'; margin-left:22px; }
+  nav a:hover{ color:var(--text); }
+
+  .hero{ margin-bottom: 48px; }
+  .eyebrow{
+    font-family:'JetBrains Mono'; font-size:12px; color:var(--mint); letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:''; width:16px; height:1px; background:var(--mint); display:inline-block; }
+  h1{
+    font-family:'Space Grotesk'; font-weight:600; font-size: clamp(30px, 4.2vw, 46px);
+    line-height:1.08; margin:0 0 16px; max-width: 780px; letter-spacing:-.01em;
+  }
+  h1 em{ color:var(--mint); font-style:normal; }
+  .hero p{ color:var(--muted); font-size:16px; max-width:560px; line-height:1.6; margin:0; }
+
+  .tool{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    display:grid;
+    grid-template-columns: 1fr 300px;
+    min-height: 480px;
+  }
+  @media (max-width: 860px){ .tool{ grid-template-columns: 1fr; } }
+
+  .stage{
+    position:relative;
+    border-right: 1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    min-height: 480px;
+    background:
+      repeating-linear-gradient(45deg, #10131a 0 2px, transparent 2px 14px);
+    overflow:hidden;
+  }
+  @media (max-width: 860px){ .stage{ border-right:none; border-bottom:1px solid var(--line); } }
+
+  .drop{
+    text-align:center; color:var(--muted); cursor:pointer;
+    padding: 40px; border:1px dashed var(--line); border-radius:var(--radius);
+    transition: border-color .15s, color .15s;
+  }
+  .drop:hover, .drop.drag{ border-color:var(--mint); color:var(--text); }
+  .drop .glyph{ font-size:26px; margin-bottom:10px; color:var(--mint); }
+  .drop .primary{ font-size:14px; margin-bottom:6px; }
+  .drop .secondary{ font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); }
+  input[type=file]{ display:none; }
+
+  .compare{ position:relative; width:100%; height:100%; display:none; }
+  .compare.active{ display:block; }
+  .compare canvas, .compare svg{
+    position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;
+  }
+  #srcCanvas{ background:#fff; }
+  #vecLayer{ background:#0a0c10; clip-path: inset(0 50% 0 0); }
+  .handle{
+    position:absolute; top:0; bottom:0; left:50%; width:2px; background:var(--mint);
+    cursor: ew-resize; transform:translateX(-1px);
+  }
+  .handle::after{
+    content:'⟷'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:30px; height:30px; background:var(--mint); color:#0c0f14; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+  }
+  .compare-labels{
+    position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:space-between;
+    padding:0 12px; pointer-events:none;
+  }
+  .compare-labels span{
+    font-family:'JetBrains Mono'; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    background: rgba(12,15,20,.75); color:var(--muted); padding:4px 8px; border-radius:2px;
+  }
+  .reset-btn{
+    position:absolute; top:10px; right:10px; z-index:5;
+    background: rgba(12,15,20,.8); border:1px solid var(--line); color:var(--muted);
+    font-family:'JetBrains Mono'; font-size:11px; padding:6px 10px; border-radius:2px; cursor:pointer;
+  }
+  .reset-btn:hover{ color:var(--text); border-color:var(--mint); }
+
+  .panel{ padding: 22px; display:flex; flex-direction:column; gap:22px; }
+  .panel-section-title{
+    font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:12px; display:flex; justify-content:space-between;
+  }
+  .field{ margin-bottom:16px; }
+  .field:last-child{ margin-bottom:0; }
+  .field-label{
+    display:flex; justify-content:space-between; font-size:12.5px; color:var(--text);
+    margin-bottom:7px;
+  }
+  .field-label .val{ font-family:'JetBrains Mono'; color:var(--mint); }
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:2px; background:var(--line); outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:13px; height:13px; border-radius:50%;
+    background:var(--mint); cursor:pointer; border:2px solid var(--bg);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px; height:13px; border-radius:50%; background:var(--mint); cursor:pointer; border:2px solid var(--bg);
+  }
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; font-size:12.5px; }
+  .switch{ position:relative; width:34px; height:18px; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider-ui{
+    position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:.15s;
+  }
+  .slider-ui::before{
+    content:''; position:absolute; width:14px; height:14px; left:2px; top:2px;
+    background:var(--muted); border-radius:50%; transition:.15s;
+  }
+  .switch input:checked + .slider-ui{ background: var(--mint-dim); }
+  .switch input:checked + .slider-ui::before{ transform: translateX(16px); background:var(--mint); }
+
+  .divider{ height:1px; background:var(--line); }
+
+  .exports{ display:flex; flex-direction:column; gap:8px; margin-top:auto; }
+  .btn{
+    font-family:'JetBrains Mono'; font-size:12px; letter-spacing:.02em;
+    padding:11px 14px; border-radius:2px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--text); cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+    transition:border-color .15s, color .15s;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--mint); color:var(--mint); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .btn.primary{ background:var(--mint); color:#0c0f14; border-color:var(--mint); font-weight:600; }
+  .btn.primary:hover:not(:disabled){ color:#0c0f14; opacity:.9; }
+  .btn.primary:disabled{ background:var(--panel-2); color:var(--muted); border-color:var(--line); }
+  .stat{ font-family:'JetBrains Mono'; font-size:10.5px; color:var(--muted); margin-top:2px; }
+
+  .info-row{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:1px; background:var(--line);
+    border:1px solid var(--line); margin-top:44px;
+  }
+  .info-cell{ background:var(--bg); padding:20px; }
+  .info-cell .n{ font-family:'JetBrains Mono'; color:var(--mint); font-size:12px; margin-bottom:8px; }
+  .info-cell h3{ font-family:'Space Grotesk'; font-size:15px; margin:0 0 8px; font-weight:600; }
+  .info-cell p{ font-size:13px; color:var(--muted); line-height:1.55; margin:0; }
+
+  footer{
+    margin-top:56px; padding-top:20px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    font-family:'JetBrains Mono'; font-size:11px; color:var(--muted);
+  }
+  footer strong{ color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Linienwerk</div>
+      <div class="brand-tag">RASTER → PFAD</div>
+    </div>
+    <nav><a href="#tool">Zum Tool</a></nav>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">Läuft lokal im Browser</div>
+    <h1>Ein Foto rein. <em>Ein Vektorpfad raus.</em></h1>
+    <p>Linienwerk trennt dunkle Formen von hellen Flächen und verfolgt jede Kontur als echten Bézier-fähigen Pfad. Alles passiert im Tab — kein Upload, kein Konto, kein Server.</p>
+  </div>
+
+  <div class="tool" id="tool">
+    <div class="stage">
+      <div class="drop" id="dropZone">
+        <div class="glyph">↧</div>
+        <div class="primary">Bild hier ablegen oder klicken</div>
+        <div class="secondary">JPG · PNG · WEBP</div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+
+      <div class="compare" id="compare">
+        <button class="reset-btn" id="resetBtn">✕ Neues Bild</button>
+        <canvas id="srcCanvas"></canvas>
+        <svg id="vecLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="handle" id="handle"></div>
+        <div class="compare-labels"><span>Original</span><span>Vektor</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div>
+        <div class="panel-section-title">Trennung</div>
+        <div class="field">
+          <div class="field-label"><span>Schwellenwert</span><span class="val" id="thresholdVal">140</span></div>
+          <input type="range" id="threshold" min="1" max="254" value="140">
+        </div>
+        <div class="field">
+          <div class="field-label"><span>Kontrast</span><span class="val" id="contrastVal">0</span></div>
+          <input type="range" id="contrast" min="-100" max="100" value="0">
+        </div>
+        <div class="field">
+          <div class="field-label"><span>Helligkeit</span><span class="val" id="brightnessVal">0</span></div>
+          <input type="range" id="brightness" min="-100" max="100" value="0">
+        </div>
+        <div class="toggle-row">
+          <span>Invertieren</span>
+          <label class="switch"><input type="checkbox" id="invert"><span class="slider-ui"></span></label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <div class="panel-section-title">Rauschen</div>
+        <div class="field">
+          <div class="field-label"><span>Weichzeichnen</span><span class="val" id="blurVal">0.6</span></div>
+          <input type="range" id="blur" min="0" max="4" step="0.1" value="0.6">
+        </div>
+        <div class="field">
+          <div class="field-label"><span>Mindestgröße (px²)</span><span class="val" id="minAreaVal">6</span></div>
+          <input type="range" id="minArea" min="0" max="120" step="1" value="6">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <div class="panel-section-title">Kontur</div>
+        <div class="field">
+          <div class="field-label"><span>Vereinfachung</span><span class="val" id="simplifyVal">1.2</span></div>
+          <input type="range" id="simplify" min="0" max="6" step="0.1" value="1.2">
+        </div>
+        <div class="toggle-row">
+          <span>Glätten (Bézier)</span>
+          <label class="switch"><input type="checkbox" id="smooth" checked><span class="slider-ui"></span></label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="stat" id="pathStat">Kein Bild geladen</div>
+
+      <div class="exports">
+        <button class="btn primary" id="downloadSVG" disabled>SVG herunterladen <span>↓</span></button>
+        <button class="btn" id="downloadPNG" disabled>PNG (S/W) <span>↓</span></button>
+        <button class="btn" id="downloadDXF" disabled>DXF (Laser/Plotter) <span>↓</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-cell">
+      <div class="n">01</div>
+      <h3>Schwarz-Weiß trennen</h3>
+      <p>Schwellenwert, Kontrast und Helligkeit holen auch schwache Kanten aus unruhigen Fotos oder Scans heraus.</p>
+    </div>
+    <div class="info-cell">
+      <div class="n">02</div>
+      <h3>Konturen verfolgen</h3>
+      <p>Ein Marching-Squares-Algorithmus läuft jede Kante ab und baut geschlossene Pfade — Löcher in Buchstaben bleiben echte Aussparungen.</p>
+    </div>
+    <div class="info-cell">
+      <div class="n">03</div>
+      <h3>Passend exportieren</h3>
+      <p>SVG für Design-Tools, PNG als bereinigtes Rasterbild, DXF für Lasercutter und CNC-nahe Software.</p>
+    </div>
+  </div>
+
+  <footer>
+    <div><strong>Linienwerk</strong> — Bildverarbeitung läuft vollständig im Browser, es wird nichts hochgeladen.</div>
+    <div>Eigenständige Nachbau-Demo, inspiriert von Bild-Vektorisierern wie Vector Boy.</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const compare = document.getElementById('compare');
+  const srcCanvas = document.getElementById('srcCanvas');
+  const vecLayer = document.getElementById('vecLayer');
+  const handle = document.getElementById('handle');
+  const resetBtn = document.getElementById('resetBtn');
+  const pathStat = document.getElementById('pathStat');
+
+  const thresholdEl = document.getElementById('threshold');
+  const contrastEl = document.getElementById('contrast');
+  const brightnessEl = document.getElementById('brightness');
+  const invertEl = document.getElementById('invert');
+  const blurEl = document.getElementById('blur');
+  const minAreaEl = document.getElementById('minArea');
+  const simplifyEl = document.getElementById('simplify');
+  const smoothEl = document.getElementById('smooth');
+  let blurCanvas = null, blurCtx = null;
+
+  const downloadSVGBtn = document.getElementById('downloadSVG');
+  const downloadPNGBtn = document.getElementById('downloadPNG');
+  const downloadDXFBtn = document.getElementById('downloadDXF');
+
+  let srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+  let imgW = 0, imgH = 0;
+  let currentSVGString = '';
+  let currentRawLoops = []; // simplified point loops (open, no dup closing point) for DXF
+  const MAX_DIM = 820;
+
+  // ---------- file loading ----------
+  ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => {
+    e.preventDefault(); dropZone.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => {
+    e.preventDefault(); dropZone.classList.remove('drag');
+  }));
+  dropZone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  resetBtn.addEventListener('click', () => {
+    compare.classList.remove('active');
+    dropZone.style.display = 'block';
+    fileInput.value = '';
+    downloadSVGBtn.disabled = downloadPNGBtn.disabled = downloadDXFBtn.disabled = true;
+    pathStat.textContent = 'Kein Bild geladen';
+  });
+
+  function loadFile(file){
+    if (!file.type.startsWith('image/')) return;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      imgW = w; imgH = h;
+      srcCanvas.width = w; srcCanvas.height = h;
+      srcCtx.drawImage(img, 0, 0, w, h);
+      vecLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      dropZone.style.display = 'none';
+      compare.classList.add('active');
+      URL.revokeObjectURL(url);
+      process();
+    };
+    img.src = url;
+  }
+
+  // ---------- comparison handle ----------
+  let dragging = false;
+  handle.addEventListener('mousedown', () => dragging = true);
+  window.addEventListener('mouseup', () => dragging = false);
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    setHandle(e.clientX);
+  });
+  handle.addEventListener('touchstart', () => dragging = true, {passive:true});
+  window.addEventListener('touchend', () => dragging = false);
+  window.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    setHandle(e.touches[0].clientX);
+  }, {passive:true});
+  function setHandle(clientX){
+    const rect = compare.getBoundingClientRect();
+    let pct = ((clientX - rect.left) / rect.width) * 100;
+    pct = Math.max(2, Math.min(98, pct));
+    handle.style.left = pct + '%';
+    vecLayer.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+  }
+
+  // ---------- controls ----------
+  [thresholdEl, contrastEl, brightnessEl, blurEl, minAreaEl, simplifyEl].forEach(el => {
+    el.addEventListener('input', () => { updateLabels(); scheduleProcess(); });
+  });
+  [invertEl, smoothEl].forEach(el => el.addEventListener('change', () => { scheduleProcess(); }));
+  function updateLabels(){
+    document.getElementById('thresholdVal').textContent = thresholdEl.value;
+    document.getElementById('contrastVal').textContent = contrastEl.value;
+    document.getElementById('brightnessVal').textContent = brightnessEl.value;
+    document.getElementById('blurVal').textContent = parseFloat(blurEl.value).toFixed(1);
+    document.getElementById('minAreaVal').textContent = minAreaEl.value;
+    document.getElementById('simplifyVal').textContent = parseFloat(simplifyEl.value).toFixed(1);
+  }
+  let procTimer = null;
+  function scheduleProcess(){
+    if (!imgW || !imgH) return;
+    pathStat.textContent = 'Verarbeite …';
+    clearTimeout(procTimer);
+    procTimer = setTimeout(() => {
+      requestAnimationFrame(() => setTimeout(process, 0));
+    }, 150);
+  }
+
+  // ---------- image processing pipeline ----------
+  function getProcessingImageData(){
+    const blurAmt = parseFloat(blurEl.value);
+    if (blurAmt <= 0) return srcCtx.getImageData(0,0,imgW,imgH);
+    if (!blurCanvas){ blurCanvas = document.createElement('canvas'); blurCtx = blurCanvas.getContext('2d', { willReadFrequently: true }); }
+    blurCanvas.width = imgW; blurCanvas.height = imgH;
+    blurCtx.clearRect(0,0,imgW,imgH);
+    blurCtx.filter = `blur(${blurAmt}px)`;
+    blurCtx.drawImage(srcCanvas, 0, 0);
+    blurCtx.filter = 'none';
+    return blurCtx.getImageData(0,0,imgW,imgH);
+  }
+
+  function computeBinary(){
+    const data = getProcessingImageData().data;
+    const threshold = parseInt(thresholdEl.value,10);
+    const contrast = parseInt(contrastEl.value,10) * 2.55;
+    const brightness = parseInt(brightnessEl.value,10);
+    const invert = invertEl.checked;
+    const factor = (259*(contrast+255)) / (255*(259-contrast));
+    const binary = new Uint8Array(imgW*imgH);
+    for (let p=0; p<imgW*imgH; p++){
+      const i = p*4;
+      const alpha = data[i+3];
+      if (alpha < 128){ binary[p] = 0; continue; }
+      let gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+      gray = factor*(gray-128) + 128 + brightness;
+      let isInk = gray < threshold;
+      if (invert) isInk = !isInk;
+      binary[p] = isInk ? 1 : 0;
+    }
+    return binary;
+  }
+
+  function keyOf(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }
+
+  function traceContours(binary, w, h){
+    const W = w+2, H = h+2;
+    function get(x,y){
+      const ox = x-1, oy = y-1;
+      if (ox<0||oy<0||ox>=w||oy>=h) return 0;
+      return binary[oy*w+ox];
+    }
+    const edges = [];
+    const adj = new Map();
+    function addEdge(p1,p2){
+      const idx = edges.length;
+      edges.push({a:p1,b:p2,used:false});
+      const k1=keyOf(p1), k2=keyOf(p2);
+      if(!adj.has(k1)) adj.set(k1,[]);
+      if(!adj.has(k2)) adj.set(k2,[]);
+      adj.get(k1).push(idx);
+      adj.get(k2).push(idx);
+    }
+    for (let j=0;j<H-1;j++){
+      for (let i=0;i<W-1;i++){
+        const a=get(i,j), b=get(i+1,j), c=get(i+1,j+1), d=get(i,j+1);
+        const cs = a*8+b*4+c*2+d;
+        if (cs===0||cs===15) continue;
+        const N=[i+0.5,j], S=[i+0.5,j+1], Wp=[i,j+0.5], E=[i+1,j+0.5];
+        switch(cs){
+          case 1: addEdge(Wp,S); break;
+          case 2: addEdge(S,E); break;
+          case 3: addEdge(Wp,E); break;
+          case 4: addEdge(E,N); break;
+          case 5: addEdge(Wp,S); addEdge(E,N); break;
+          case 6: addEdge(N,S); break;
+          case 7: addEdge(Wp,N); break;
+          case 8: addEdge(Wp,N); break;
+          case 9: addEdge(N,S); break;
+          case 10: addEdge(Wp,N); addEdge(S,E); break;
+          case 11: addEdge(E,N); break;
+          case 12: addEdge(Wp,E); break;
+          case 13: addEdge(S,E); break;
+          case 14: addEdge(Wp,S); break;
+        }
+      }
+    }
+    const loops = [];
+    for (const idxList of adj.values()){
+      for (const idx of idxList){
+        if (edges[idx].used) continue;
+        const loop = [];
+        let currentEdgeIdx = idx;
+        let currentPoint = edges[idx].a;
+        const startKey = keyOf(currentPoint);
+        loop.push(currentPoint);
+        let safety = 0;
+        while(true){
+          const edge = edges[currentEdgeIdx];
+          if (edge.used) break;
+          edge.used = true;
+          const nextPoint = (keyOf(edge.a)===keyOf(currentPoint)) ? edge.b : edge.a;
+          loop.push(nextPoint);
+          currentPoint = nextPoint;
+          if (keyOf(currentPoint) === startKey) break;
+          const candidates = adj.get(keyOf(currentPoint)) || [];
+          const nextIdx = candidates.find(ci => !edges[ci].used);
+          if (nextIdx === undefined) break;
+          currentEdgeIdx = nextIdx;
+          safety++;
+          if (safety > 300000) break;
+        }
+        if (loop.length > 3) loops.push(loop.map(p => [p[0]-1, p[1]-1]));
+      }
+    }
+    return loops;
+  }
+
+  function perpDist(p,a,b){
+    const dx=b[0]-a[0], dy=b[1]-a[1];
+    if (dx===0 && dy===0) return Math.hypot(p[0]-a[0], p[1]-a[1]);
+    const t = ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / (dx*dx+dy*dy);
+    const px = a[0]+t*dx, py = a[1]+t*dy;
+    return Math.hypot(p[0]-px, p[1]-py);
+  }
+  function dp(points, eps){
+    if (points.length < 3) return points.slice();
+    let dmax=0, index=0;
+    const end = points.length-1;
+    for (let i=1;i<end;i++){
+      const d = perpDist(points[i], points[0], points[end]);
+      if (d>dmax){ dmax=d; index=i; }
+    }
+    if (dmax > eps){
+      const r1 = dp(points.slice(0,index+1), eps);
+      const r2 = dp(points.slice(index), eps);
+      return r1.slice(0,-1).concat(r2);
+    }
+    return [points[0], points[end]];
+  }
+  function simplifyClosedLoop(loop, eps){
+    const pts = loop.slice(0, loop.length-1); // drop duplicate closing point
+    if (pts.length < 5 || eps <= 0) return pts;
+    const b = Math.floor(pts.length/2);
+    const chain1 = pts.slice(0, b+1);
+    const chain2 = pts.slice(b).concat([pts[0]]);
+    const s1 = dp(chain1, eps);
+    const s2 = dp(chain2, eps);
+    return s1.slice(0,-1).concat(s2.slice(0,-1));
+  }
+
+  function polygonArea(pts){
+    let a = 0;
+    const n = pts.length;
+    for (let i=0;i<n;i++){
+      const [x1,y1] = pts[i];
+      const [x2,y2] = pts[(i+1)%n];
+      a += x1*y2 - x2*y1;
+    }
+    return Math.abs(a)/2;
+  }
+
+  function midpoint(a,b){ return [(a[0]+b[0])/2,(a[1]+b[1])/2]; }
+  function fmtP(p){ return p[0].toFixed(2)+','+p[1].toFixed(2); }
+  function loopToPathD(pts, smooth){
+    const n = pts.length;
+    if (n < 3) return '';
+    if (!smooth){
+      let d = `M ${fmtP(pts[0])} `;
+      for (let k=1;k<n;k++) d += `L ${fmtP(pts[k])} `;
+      return d + 'Z';
+    }
+    let d = `M ${fmtP(midpoint(pts[n-1], pts[0]))} `;
+    for (let k=0;k<n;k++){
+      const p1 = pts[k], p2 = pts[(k+1)%n];
+      const mid = midpoint(p1,p2);
+      d += `Q ${fmtP(p1)} ${fmtP(mid)} `;
+    }
+    return d + 'Z';
+  }
+
+  function process(){
+    if (!imgW || !imgH) return;
+    const binary = computeBinary();
+    const contours = traceContours(binary, imgW, imgH);
+    const eps = parseFloat(simplifyEl.value);
+    const smooth = smoothEl.checked;
+    const minArea = parseFloat(minAreaEl.value);
+    const bigEnough = minArea > 0
+      ? contours.filter(loop => polygonArea(loop) >= minArea)
+      : contours;
+    const simplified = bigEnough.map(loop => simplifyClosedLoop(loop, eps)).filter(l => l.length >= 3);
+    currentRawLoops = simplified;
+
+    let dAttr = '';
+    for (const loop of simplified) dAttr += loopToPathD(loop, smooth) + ' ';
+
+    currentSVGString =
+`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${imgW} ${imgH}" width="${imgW}" height="${imgH}">
+<path d="${dAttr.trim()}" fill="#000000" fill-rule="evenodd"/>
+</svg>`;
+
+    vecLayer.innerHTML = `<rect width="${imgW}" height="${imgH}" fill="#0a0c10"/><path d="${dAttr.trim()}" fill="#6ee7b7" fill-rule="evenodd"/>`;
+
+    const totalPts = simplified.reduce((s,l)=>s+l.length,0);
+    const removed = contours.length - bigEnough.length;
+    const noiseNote = removed > 0 ? ` · ${removed} Störer gefiltert` : '';
+    pathStat.textContent = `${simplified.length} Konturen · ${totalPts} Ankerpunkte · ${imgW}×${imgH}px${noiseNote}`;
+
+    downloadSVGBtn.disabled = false;
+    downloadPNGBtn.disabled = false;
+    downloadDXFBtn.disabled = simplified.length === 0;
+  }
+
+  // ---------- exports ----------
+  downloadSVGBtn.addEventListener('click', () => {
+    downloadBlob(new Blob([currentSVGString], {type:'image/svg+xml'}), 'linienwerk-vektor.svg');
+  });
+  downloadPNGBtn.addEventListener('click', () => {
+    const binary = computeBinary();
+    const off = document.createElement('canvas');
+    off.width = imgW; off.height = imgH;
+    const octx = off.getContext('2d');
+    const out = octx.createImageData(imgW, imgH);
+    for (let p=0;p<imgW*imgH;p++){
+      const i = p*4;
+      const v = binary[p] ? 0 : 255;
+      out.data[i]=v; out.data[i+1]=v; out.data[i+2]=v;
+      out.data[i+3] = binary[p] ? 255 : 0;
+    }
+    octx.putImageData(out, 0, 0);
+    off.toBlob(b => downloadBlob(b, 'linienwerk-bw.png'));
+  });
+  downloadDXFBtn.addEventListener('click', () => {
+    let s = '0\nSECTION\n2\nENTITIES\n';
+    for (const loop of currentRawLoops){
+      s += `0\nLWPOLYLINE\n8\n0\n90\n${loop.length}\n70\n1\n`;
+      for (const p of loop){
+        s += `10\n${p[0].toFixed(3)}\n20\n${(imgH-p[1]).toFixed(3)}\n`;
+      }
+    }
+    s += '0\nENDSEC\n0\nEOF\n';
+    downloadBlob(new Blob([s], {type:'application/dxf'}), 'linienwerk-pfad.dxf');
+  });
+  function downloadBlob(blob, name){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  updateLabels();
+})();
+</script>
+</body>
+</html>
